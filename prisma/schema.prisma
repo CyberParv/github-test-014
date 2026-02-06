@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DB_CONNECTION_STRING")
+}
+
+enum UserRole {
+  customer
+  admin
+}
+
+enum OrderStatus {
+  pending
+  confirmed
+  preparing
+  ready
+  completed
+  cancelled
+}
+
+enum FulfillmentType {
+  pickup
+  delivery
+}
+
+enum ReservationStatus {
+  pending
+  confirmed
+  cancelled
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String?
+  passwordHash String
+  role         UserRole     @default(customer)
+  createdAt    DateTime     @default(now())
+  orders       Order[]
+  reviews      Review[]
+  cartItems    CartItem[]
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  order     Int        @default(0)
+  menuItems MenuItem[]
+}
+
+model MenuItem {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  price       Float
+  currency    String      @default("USD")
+  imageUrl    String?
+  categoryId  String?
+  available   Boolean     @default(true)
+  variants    Json?
+  createdAt   DateTime    @default(now())
+  category    Category?   @relation(fields: [categoryId], references: [id])
+  reviews     Review[]
+  orderItems  OrderItem[]
+  cartItems   CartItem[]
+}
+
+model Order {
+  id          String          @id @default(cuid())
+  userId      String
+  total       Float
+  status      OrderStatus     @default(pending)
+  fulfillment FulfillmentType
+  contact     Json
+  createdAt   DateTime        @default(now())
+  user        User            @relation(fields: [userId], references: [id])
+  items       OrderItem[]
+}
+
+model OrderItem {
+  id         String    @id @default(cuid())
+  orderId    String
+  menuItemId String
+  quantity   Int
+  price      Float
+  order      Order     @relation(fields: [orderId], references: [id])
+  menuItem   MenuItem  @relation(fields: [menuItemId], references: [id])
+}
+
+model Reservation {
+  id        String             @id @default(cuid())
+  name      String
+  contact   String
+  partySize Int
+  datetime  DateTime
+  status    ReservationStatus  @default(pending)
+  createdAt DateTime           @default(now())
+}
+
+model Review {
+  id         String    @id @default(cuid())
+  menuItemId String
+  userId     String
+  rating     Int
+  comment    String?
+  createdAt  DateTime  @default(now())
+  menuItem   MenuItem  @relation(fields: [menuItemId], references: [id])
+  user       User      @relation(fields: [userId], references: [id])
+}
+
+model CartItem {
+  id         String    @id @default(cuid())
+  userId     String
+  menuItemId String
+  quantity   Int       @default(1)
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id])
+  menuItem   MenuItem  @relation(fields: [menuItemId], references: [id])
+}
+
+model TokenBlacklist {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
